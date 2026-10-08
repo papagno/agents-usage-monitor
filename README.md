@@ -36,6 +36,10 @@ swift test                        # parser tests
 
 Open at Login is enabled on first run. Refresh, Open at Login and Quit live in the gear menu at the bottom of the panel.
 
+## License
+
+[GPL-3.0](LICENSE). Copyright © 2026 Francesco Papagno.
+
 ## Credits
 
 Brand icons from [Simple Icons](https://simpleicons.org) (CC0). Logos are trademarks of their respective owners.
