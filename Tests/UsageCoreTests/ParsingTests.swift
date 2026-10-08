@@ -68,3 +68,75 @@ import Testing
     let u = try CopilotProvider.parse(Data(json.utf8))
     #expect(u.windows[0].duration == TimeInterval(31 * 86400))
 }
+
+@Test func menuBarShowsSessionAndWeeklyWhenBothExist() {
+    let both = ProviderUsage(plan: nil, windows: [
+        UsageWindow(label: "Session (5h)", usedPercent: 80, resetsAt: nil, duration: 5 * 3600),
+        UsageWindow(label: "Weekly", usedPercent: 30, resetsAt: nil, duration: 7 * 86400),
+        UsageWindow(label: "Weekly Opus", usedPercent: 45, resetsAt: nil, duration: 7 * 86400),
+        UsageWindow(label: "Extra usage", usedPercent: 99, resetsAt: nil),
+    ])
+    #expect(both.menuBarPercents == [80, 45])
+    let monthly = ProviderUsage(plan: nil, windows: [
+        UsageWindow(label: "Premium requests", usedPercent: 27, resetsAt: nil, duration: 31 * 86400),
+    ])
+    #expect(monthly.menuBarPercents == [27])
+}
+
+@Test func layoutReconcilesSavedPreferences() {
+    let l = ProviderLayout(knownIDs: ["a", "b", "c"], savedOrder: ["c", "x", "a", "c"], hidden: ["a", "x"])
+    #expect(l.order == ["c", "a", "b"])
+    #expect(l.visible == ["c", "b"])
+    let allHidden = ProviderLayout(knownIDs: ["a", "b"], hidden: ["a", "b"])
+    #expect(allHidden.visible == ["a"])
+}
+
+@Test func layoutKeepsOneVisibleAndMoves() {
+    var l = ProviderLayout(knownIDs: ["a", "b", "c"])
+    l.setVisible("a", false)
+    l.setVisible("b", false)
+    #expect(!l.canToggle("c"))
+    l.setVisible("c", false)
+    #expect(l.visible == ["c"])
+    l.setVisible("a", true)
+    l.move("a", to: "c")
+    #expect(l.order == ["b", "c", "a"])
+    l.move("a", to: "b")
+    #expect(l.order == ["a", "b", "c"])
+}
+
+@Test func usageRoundTripsThroughCodable() throws {
+    let u = ProviderUsage(plan: "Pro", windows: [
+        UsageWindow(label: "Weekly", usedPercent: 35, resetsAt: Date(timeIntervalSince1970: 1_800_000_000),
+                    duration: 7 * 86400, detail: "x"),
+    ])
+    let decoded = try JSONDecoder().decode(ProviderUsage.self, from: JSONEncoder().encode(u))
+    #expect(decoded == u)
+    #expect(UsageError.rateLimited(retryAfter: 60).isRateLimited)
+    #expect(UsageError.rateLimited(retryAfter: 60).retryAfter == 60)
+    #expect(!UsageError.parse("x").isRateLimited)
+}
+
+@Test func retryAfterParsesSecondsAndHTTPDates() {
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    #expect(parseRetryAfter("2930", now: now) == 2930)
+    #expect(parseRetryAfter(" 0 ", now: now) == 0)
+    #expect(parseRetryAfter(nil, now: now) == nil)
+    #expect(parseRetryAfter("soon", now: now) == nil)
+    // 1_800_000_000 is Fri, 15 Jan 2027 08:00:00 GMT
+    #expect(parseRetryAfter("Fri, 15 Jan 2027 08:10:00 GMT", now: now) == 600)
+    #expect(parseRetryAfter("Fri, 15 Jan 2027 07:00:00 GMT", now: now) == 0)
+}
+
+@Test func cachedUsageRelevance() {
+    let now = Date()
+    let u = ProviderUsage(plan: nil, windows: [
+        UsageWindow(label: "Session (5h)", usedPercent: 10, resetsAt: now.addingTimeInterval(3600), duration: 5 * 3600),
+    ])
+    #expect(u.isStillRelevant(fetchedAt: now.addingTimeInterval(-60), maxAge: 300, now: now))
+    #expect(!u.isStillRelevant(fetchedAt: now.addingTimeInterval(-600), maxAge: 300, now: now))
+    let reset = ProviderUsage(plan: nil, windows: [
+        UsageWindow(label: "Session (5h)", usedPercent: 90, resetsAt: now.addingTimeInterval(-1), duration: 5 * 3600),
+    ])
+    #expect(!reset.isStillRelevant(fetchedAt: now.addingTimeInterval(-60), maxAge: 300, now: now))
+}

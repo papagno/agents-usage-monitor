@@ -1,8 +1,15 @@
 import SwiftUI
 
+struct MenuBarItem {
+    let id: String
+    let percents: [String]
+    /// Shows a warning sign after the percentages (e.g. rate limited, values are stale).
+    var warning = false
+}
+
 /// Renders icons + percentages into a template NSImage; MenuBarExtra labels only reliably display a single Image/Text.
 struct MenuBarLabel: View {
-    let items: [(id: String, percent: String)]
+    let items: [MenuBarItem]
 
     var body: some View {
         Image(nsImage: render())
@@ -13,10 +20,23 @@ struct MenuBarLabel: View {
             ForEach(items, id: \.id) { item in
                 HStack(spacing: 3) {
                     ProviderIcon(providerID: item.id).frame(width: 14, height: 14)
-                    Text(item.percent).font(.system(size: 12, weight: .medium)).monospacedDigit()
+                    if item.percents.count > 1 {
+                        // Session on top, weekly below.
+                        VStack(alignment: .trailing, spacing: -1) {
+                            ForEach(Array(item.percents.enumerated()), id: \.offset) { _, p in
+                                Text(p).font(.system(size: 8.5, weight: .semibold)).monospacedDigit()
+                            }
+                        }
+                    } else {
+                        Text(item.percents.first ?? "–").font(.system(size: 12, weight: .medium)).monospacedDigit()
+                    }
+                    if item.warning {
+                        Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 10, weight: .semibold))
+                    }
                 }
             }
         }
+        .fixedSize()
         .foregroundStyle(.black)
         .padding(.horizontal, 1)
         .frame(height: 18)

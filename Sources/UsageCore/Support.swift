@@ -37,10 +37,23 @@ enum HTTP {
         switch code {
         case 200..<300: return data
         case 401, 403: throw UsageError.tokenExpired(expiredHint)
-        case 429: throw UsageError.rateLimited
+        case 429:
+            let header = (resp as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After")
+            throw UsageError.rateLimited(retryAfter: parseRetryAfter(header))
         default: throw UsageError.http(code, String(decoding: data, as: UTF8.self))
         }
     }
+}
+
+/// Parses a `Retry-After` header value: either delay-seconds or an HTTP date.
+public func parseRetryAfter(_ value: String?, now: Date = Date()) -> TimeInterval? {
+    guard let v = value?.trimmingCharacters(in: .whitespaces), !v.isEmpty else { return nil }
+    if let seconds = Double(v) { return max(0, seconds) }
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.timeZone = TimeZone(identifier: "GMT")
+    f.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+    return f.date(from: v).map { max(0, $0.timeIntervalSince(now)) }
 }
 
 func parseISODate(_ s: String?) -> Date? {

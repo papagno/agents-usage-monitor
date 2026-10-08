@@ -19,12 +19,22 @@ struct AgentsUsageMonitorApp: App {
 struct UsagePanel: View {
     let store: UsageStore
     let launchAtLogin: LaunchAtLogin
+    @State private var dragging: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(store.providers, id: \.id) { p in
-                ProviderSection(provider: p, state: store.states[p.id] ?? .loading)
-                Divider()
+            ForEach(store.visibleProviders, id: \.id) { p in
+                VStack(alignment: .leading, spacing: 12) {
+                    ProviderSection(provider: p, state: store.states[p.id] ?? .loading, retryAt: store.retryAt[p.id])
+                    Divider()
+                }
+                .contentShape(Rectangle())
+                .opacity(dragging == p.id ? 0.4 : 1)
+                .onDrag {
+                    dragging = p.id
+                    return NSItemProvider(object: p.id as NSString)
+                }
+                .onDrop(of: [.text], delegate: ReorderDropDelegate(target: p.id, dragging: $dragging, store: store))
             }
             if let err = launchAtLogin.error {
                 Text(err).font(.caption).foregroundStyle(.red)
@@ -43,6 +53,13 @@ struct UsagePanel: View {
                         .disabled(store.isRefreshing)
                     Toggle("Open at Login", isOn: Binding(get: { launchAtLogin.isEnabled },
                                                           set: { launchAtLogin.set($0) }))
+                    Section("Show") {
+                        ForEach(store.orderedProviders, id: \.id) { p in
+                            Toggle(p.name, isOn: Binding(get: { store.layout.isVisible(p.id) },
+                                                         set: { store.setVisible(p.id, $0) }))
+                                .disabled(!store.layout.canToggle(p.id))
+                        }
+                    }
                     Divider()
                     Button("Quit") { NSApplication.shared.terminate(nil) }
                         .keyboardShortcut("q")
@@ -59,9 +76,29 @@ struct UsagePanel: View {
     }
 }
 
+/// Live-reorders providers as a dragged section passes over another one.
+struct ReorderDropDelegate: DropDelegate {
+    let target: String
+    @Binding var dragging: String?
+    let store: UsageStore
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != target else { return }
+        withAnimation(.easeInOut(duration: 0.15)) { store.move(dragging, to: target) }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
+    }
+}
+
 struct ProviderSection: View {
     let provider: any UsageProvider
     let state: ProviderState
+    var retryAt: Date?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -78,9 +115,21 @@ struct ProviderSection: View {
             if let usage = state.usage {
                 ForEach(usage.windows) { WindowRow(window: $0) }
             }
-            if case .failed(let msg, _) = state {
-                Label(msg, systemImage: "exclamationmark.triangle")
-                    .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+            if case .failed(let msg, _, let last, let at) = state {
+                Label {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(msg)
+                        if let retryAt, retryAt > Date() {
+                            Text("Next attempt in \(retryAt, style: .relative).")
+                        }
+                        if last != nil, let at {
+                            Text("Showing last known values from \(at, style: .relative) ago.")
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle")
+                }
+                .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
