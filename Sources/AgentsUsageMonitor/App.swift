@@ -112,6 +112,7 @@ struct ProviderSection: View {
                 Spacer()
                 if case .loading = state { ProgressView().controlSize(.mini) }
             }
+            .padding(.bottom, 4)
             if let usage = state.usage {
                 ForEach(usage.windows) { WindowRow(window: $0) }
             }
@@ -150,7 +151,7 @@ struct WindowRow: View {
 
     var body: some View {
         let expected = window.expectedPercent()
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(window.label).font(.subheadline)
                 Spacer()
