@@ -2,8 +2,14 @@
 
 A tiny macOS menu bar app showing current plan usage for **Claude**, **ChatGPT** and **GitHub Copilot**.
 
-The menu bar shows the most-used limit per provider next to an icon for each service.
-Click it for per-window details (session/weekly/monthly limits, reset times). Refreshes every 5 minutes.
+<p align="center"><img src="docs/screenshot.png" alt="Agents Usage Monitor menu bar panel" width="420"></p>
+
+- The menu bar shows the most-used limit per provider next to an icon for each service.
+- Click it for per-window details: session/weekly/monthly limits, plan, and reset times.
+- Hover a usage bar to see the **even-pace** marker — where you'd be if you spread usage evenly over the window — and whether you're ahead of or under pace.
+- Refreshes every 5 minutes.
+
+<sub>Screenshot uses sample data.</sub>
 
 ## Requirements
 
