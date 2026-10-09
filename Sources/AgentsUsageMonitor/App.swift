@@ -73,6 +73,7 @@ struct UsagePanel: View {
         }
         .padding(14)
         .frame(width: 320)
+        .resizesHostingWindowToFit()
     }
 }
 
