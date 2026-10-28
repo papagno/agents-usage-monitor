@@ -5,10 +5,11 @@ import UsageCore
 struct FuelGaugeApp: App {
     @State private var store = UsageStore()
     @State private var launchAtLogin = LaunchAtLogin()
+    @State private var updates = Updates()
 
     var body: some Scene {
         MenuBarExtra {
-            UsagePanel(store: store, launchAtLogin: launchAtLogin)
+            UsagePanel(store: store, launchAtLogin: launchAtLogin, updates: updates)
         } label: {
             MenuBarLabel(items: store.menuBarItems)
         }
@@ -19,6 +20,7 @@ struct FuelGaugeApp: App {
 struct UsagePanel: View {
     let store: UsageStore
     let launchAtLogin: LaunchAtLogin
+    let updates: Updates
     @State private var dragging: String?
 
     var body: some View {
@@ -61,6 +63,7 @@ struct UsagePanel: View {
                         }
                     }
                     Divider()
+                    CheckForUpdatesButton(updates: updates)
                     Button("Quit") { NSApplication.shared.terminate(nil) }
                         .keyboardShortcut("q")
                 } label: {
