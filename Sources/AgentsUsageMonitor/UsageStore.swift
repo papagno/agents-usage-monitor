@@ -54,6 +54,9 @@ final class UsageStore {
     private(set) var lastRefresh: Date?
     private(set) var isRefreshing = false
     private var timer: Timer?
+    /// Ticks every minute so menu bar countdowns stay current.
+    private(set) var clock = Date()
+    private var clockTimer: Timer?
 
     static let refreshInterval: TimeInterval = 5 * 60
     private static let orderKey = "providerOrder"
@@ -85,8 +88,23 @@ final class UsageStore {
         // Skip providers whose saved values are still relevant; the timer picks them up later.
         Task { await refresh(onlyStale: true) }
         timer = Timer.scheduledTimer(withTimeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
-            Task { await self?.refresh() }
+            Task { await self?.refresh(onlyStale: true) }
         }
+        clockTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.tick() }
+        }
+    }
+
+    private func tick() {
+        let previous = clock
+        clock = Date()
+        // Fetch fresh values as soon as a limit resets instead of waiting for the next refresh.
+        let resetPassed = visibleProviders.contains { p in
+            states[p.id]?.usage?.windows.contains { w in
+                w.resetsAt.map { $0 > previous && $0 <= clock } ?? false
+            } ?? false
+        }
+        if resetPassed { Task { await refresh(onlyStale: true) } }
     }
 
     func refresh(onlyStale: Bool = false) async {
@@ -104,7 +122,12 @@ final class UsageStore {
 
     private func needsFetch(_ id: String) -> Bool {
         guard let state = states[id], let usage = state.usage, let at = state.updatedAt else { return true }
-        return !usage.isStillRelevant(fetchedAt: at, maxAge: Self.refreshInterval)
+        // A reset passed since the last fetch: values are outdated.
+        if !usage.isStillRelevant(fetchedAt: at, maxAge: .infinity) { return true }
+        // Exhausted limits can't move until their reset, which the clock tick catches.
+        if usage.isExhausted() { return false }
+        // Small slack so the periodic timer doesn't skip fetches that are just under the interval old.
+        return !usage.isStillRelevant(fetchedAt: at, maxAge: Self.refreshInterval - 30)
     }
 
     private func fetch(_ p: any UsageProvider) async {
@@ -157,9 +180,9 @@ final class UsageStore {
 
     var menuBarItems: [MenuBarItem] {
         visibleProviders.map { p in
-            let values = states[p.id]?.usage?.menuBarPercents ?? []
+            let windows = states[p.id]?.usage?.menuBarWindows ?? []
             return MenuBarItem(id: p.id,
-                               percents: values.isEmpty ? ["–"] : values.map { "\(Int($0.rounded()))%" },
+                               percents: windows.isEmpty ? ["–"] : windows.map { $0.menuBarText(now: clock) },
                                warning: states[p.id]?.isRateLimited ?? false)
         }
     }
