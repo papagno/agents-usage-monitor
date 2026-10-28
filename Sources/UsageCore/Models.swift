@@ -44,15 +44,45 @@ public struct ProviderUsage: Sendable, Equatable, Codable {
     /// The most constrained window; what the menu bar shows.
     public var headlinePercent: Double? { windows.map(\.usedPercent).max() }
 
-    /// Values shown in the menu bar: `[session, weekly]` when the plan has both a short session
+    /// Whether a limit is used up and waiting on a known reset; values can't change until a reset passes.
+    public func isExhausted(now: Date = Date()) -> Bool {
+        windows.contains { w in w.usedPercent >= 100 && (w.resetsAt.map { $0 > now } ?? false) }
+    }
+
+    /// Windows shown in the menu bar: `[session, weekly]` when the plan has both a short session
     /// window and weekly limits (highest weekly wins), otherwise just the headline.
-    public var menuBarPercents: [Double] {
+    public var menuBarWindows: [UsageWindow] {
         let session = windows.filter { ($0.duration ?? 0) > 0 && $0.duration! <= 6 * 3600 }
         let weekly = windows.filter { ($0.duration ?? 0) > 6 * 3600 && $0.duration! <= 8 * 86400 }
-        if let s = session.map(\.usedPercent).max(), let w = weekly.map(\.usedPercent).max() {
+        // Ties (e.g. several exhausted limits) go to the later reset, since that's what actually blocks.
+        let order: (UsageWindow, UsageWindow) -> Bool = {
+            ($0.usedPercent, $0.resetsAt ?? .distantPast) < ($1.usedPercent, $1.resetsAt ?? .distantPast)
+        }
+        if let s = session.max(by: order), let w = weekly.max(by: order) {
             return [s, w]
         }
-        return headlinePercent.map { [$0] } ?? []
+        return windows.max(by: order).map { [$0] } ?? []
+    }
+
+    public var menuBarPercents: [Double] { menuBarWindows.map(\.usedPercent) }
+}
+
+extension UsageWindow {
+    /// Menu bar text: the percentage, or the time left until reset once the limit is exhausted.
+    public func menuBarText(now: Date = Date()) -> String {
+        if usedPercent >= 100, let resetsAt, resetsAt > now {
+            return Self.compactCountdown(resetsAt.timeIntervalSince(now))
+        }
+        return "\(Int(usedPercent.rounded()))%"
+    }
+
+    /// Compact duration such as `2d4h`, `3h12m` or `45m`; rounds up to the next minute.
+    public static func compactCountdown(_ interval: TimeInterval) -> String {
+        let minutes = max(1, Int((interval / 60).rounded(.up)))
+        let d = minutes / 1440, h = minutes % 1440 / 60, m = minutes % 60
+        if d > 0 { return h > 0 ? "\(d)d\(h)h" : "\(d)d" }
+        if h > 0 { return m > 0 ? "\(h)h\(m)m" : "\(h)h" }
+        return "\(m)m"
     }
 }
 

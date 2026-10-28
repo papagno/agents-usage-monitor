@@ -4,7 +4,7 @@ A tiny macOS menu bar app showing current plan usage for **Claude**, **ChatGPT**
 
 <p align="center"><img src="docs/screenshot.png" alt="Agents Usage Monitor menu bar panel in light and dark mode" width="840"></p>
 
-- The menu bar shows the most-used limit per provider next to an icon for each service.
+- The menu bar shows the most-used limit per provider next to an icon for each service. When a limit hits 100%, it shows the time left until it resets instead (e.g. `2h15m`).
   Plans with both a 5h session and weekly limits show both, stacked (session on top, weekly below).
 - Click it for per-window details: session/weekly/monthly limits, plan, and reset times.
 - Hover a usage bar to see the **even-pace** marker — where you'd be if you spread usage evenly over the window — and whether you're ahead of or under pace.

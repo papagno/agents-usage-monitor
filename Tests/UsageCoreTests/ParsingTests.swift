@@ -83,6 +83,31 @@ import Testing
     #expect(monthly.menuBarPercents == [27])
 }
 
+@Test func menuBarShowsCountdownWhenLimitExhausted() {
+    let now = Date(timeIntervalSince1970: 1_000_000)
+    let window = { (used: Double, resetIn: TimeInterval) in
+        UsageWindow(label: "w", usedPercent: used, resetsAt: now.addingTimeInterval(resetIn), duration: 5 * 3600)
+    }
+    #expect(window(99, 3600).menuBarText(now: now) == "99%")
+    #expect(window(100, 2 * 3600 + 5 * 60 + 10).menuBarText(now: now) == "2h6m")
+    #expect(window(100, 30).menuBarText(now: now) == "1m")
+    #expect(window(100, 3 * 86400 + 4 * 3600).menuBarText(now: now) == "3d4h")
+    #expect(window(100, 3600).menuBarText(now: now) == "1h")
+    #expect(window(100, -60).menuBarText(now: now) == "100%")
+
+    // With several exhausted limits, the later reset is the one that matters.
+    let usage = ProviderUsage(plan: nil, windows: [
+        UsageWindow(label: "a", usedPercent: 100, resetsAt: now.addingTimeInterval(600), duration: 31 * 86400),
+        UsageWindow(label: "b", usedPercent: 100, resetsAt: now.addingTimeInterval(7200), duration: 31 * 86400),
+    ])
+    #expect(usage.menuBarWindows.map { $0.menuBarText(now: now) } == ["2h"])
+    #expect(usage.isExhausted(now: now))
+    #expect(!usage.isExhausted(now: now.addingTimeInterval(7200)))
+    // No known reset (e.g. Claude extra usage): nothing to wait for.
+    #expect(!ProviderUsage(plan: nil, windows: [UsageWindow(label: "x", usedPercent: 100, resetsAt: nil)])
+        .isExhausted(now: now))
+}
+
 @Test func layoutReconcilesSavedPreferences() {
     let l = ProviderLayout(knownIDs: ["a", "b", "c"], savedOrder: ["c", "x", "a", "c"], hidden: ["a", "x"])
     #expect(l.order == ["c", "a", "b"])
