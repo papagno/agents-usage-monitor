@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Builds AgentsUsageMonitor.app into ./build. Pass --install to copy it to /Applications and launch it.
+# Builds FuelGauge.app into ./build. Pass --install to copy it to /Applications and launch it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-APP_NAME="AgentsUsageMonitor"
+APP_NAME="FuelGauge"
 APP="build/$APP_NAME.app"
 
 swift build -c release
@@ -18,9 +18,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Agents Usage Monitor</string>
-  <key>CFBundleDisplayName</key><string>Agents Usage Monitor</string>
-  <key>CFBundleIdentifier</key><string>dev.papagno.AgentsUsageMonitor</string>
+  <key>CFBundleName</key><string>Fuel Gauge</string>
+  <key>CFBundleDisplayName</key><string>Fuel Gauge</string>
+  <key>CFBundleIdentifier</key><string>com.effectivebits.FuelGauge</string>
   <key>CFBundleExecutable</key><string>$APP_NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0.0</string>
@@ -35,7 +35,7 @@ codesign --force --sign - "$APP"
 echo "Built $APP"
 
 if [[ "${1:-}" == "--install" ]]; then
-  osascript -e "quit app id \"dev.papagno.AgentsUsageMonitor\"" 2>/dev/null || true
+  osascript -e "quit app id \"com.effectivebits.FuelGauge\"" 2>/dev/null || true
   rm -rf "/Applications/$APP_NAME.app"
   cp -R "$APP" /Applications/
   open "/Applications/$APP_NAME.app"

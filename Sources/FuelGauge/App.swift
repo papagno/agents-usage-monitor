@@ -2,7 +2,7 @@ import SwiftUI
 import UsageCore
 
 @main
-struct AgentsUsageMonitorApp: App {
+struct FuelGaugeApp: App {
     @State private var store = UsageStore()
     @State private var launchAtLogin = LaunchAtLogin()
 

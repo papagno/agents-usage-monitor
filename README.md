@@ -1,8 +1,8 @@
-# Agents Usage Monitor
+# Fuel Gauge
 
 A tiny macOS menu bar app showing current plan usage for **Claude**, **ChatGPT** and **GitHub Copilot**.
 
-<p align="center"><img src="docs/screenshot.png" alt="Agents Usage Monitor menu bar panel in light and dark mode" width="840"></p>
+<p align="center"><img src="docs/screenshot.png" alt="Fuel Gauge menu bar panel in light and dark mode" width="840"></p>
 
 - The menu bar shows the most-used limit per provider next to an icon for each service. When a limit hits 100%, it shows the time left until it resets instead (e.g. `2h15m`).
   Plans with both a 5h session and weekly limits show both, stacked (session on top, weekly below).
@@ -29,7 +29,7 @@ These are undocumented endpoints and may change. If a token expires, re-run the 
 ## Build & install
 
 ```sh
-./scripts/build-app.sh            # builds build/AgentsUsageMonitor.app
+./scripts/build-app.sh            # builds build/FuelGauge.app
 ./scripts/build-app.sh --install  # copies to /Applications and launches
 swift test                        # parser tests
 ```

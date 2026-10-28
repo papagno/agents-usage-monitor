@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "AgentsUsageMonitor",
+    name: "FuelGauge",
     platforms: [.macOS(.v14)],
     targets: [
         .target(name: "UsageCore"),
-        .executableTarget(name: "AgentsUsageMonitor", dependencies: ["UsageCore"]),
+        .executableTarget(name: "FuelGauge", dependencies: ["UsageCore"]),
         .testTarget(name: "UsageCoreTests", dependencies: ["UsageCore"]),
     ]
 )
